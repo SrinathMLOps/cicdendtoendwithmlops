@@ -124,3 +124,41 @@ python src/serve.py
 ## License
 
 MIT
+
+---
+
+## 📚 Complete Documentation Index
+
+| Document | Description | Time to Read |
+|----------|-------------|--------------|
+| [README.md](README.md) | Project overview and quick links | 5 min |
+| [QUICKSTART.md](QUICKSTART.md) | Get started in 30 minutes | 10 min |
+| [SETUP_GUIDE.md](SETUP_GUIDE.md) | Complete step-by-step setup | 30 min |
+| [MLFLOW_SETUP.md](MLFLOW_SETUP.md) | Detailed MLflow configuration | 20 min |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture and design | 25 min |
+| [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | Comprehensive project summary | 15 min |
+
+## 🎯 Quick Links
+
+- **GitHub Repository**: https://github.com/SrinathMLOps/cicdendtoendwithmlops
+- **Start Here**: [QUICKSTART.md](QUICKSTART.md)
+- **Full Setup**: [SETUP_GUIDE.md](SETUP_GUIDE.md)
+- **MLflow Guide**: [MLFLOW_SETUP.md](MLFLOW_SETUP.md)
+
+## 🚀 What You'll Build
+
+A complete production-ready MLOps pipeline with:
+- 16 automated pipeline stages
+- Experiment tracking with MLflow
+- Model registry and versioning
+- Data version control with DVC
+- Containerized deployment on Kubernetes
+- REST API for model serving
+- Full AWS cloud integration
+
+**Total Setup Time**: ~2 hours  
+**Skill Level**: Intermediate
+
+---
+
+**Built with ❤️ for the MLOps community**
