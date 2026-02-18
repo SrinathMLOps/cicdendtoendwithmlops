@@ -3,12 +3,13 @@
 ## Table of Contents
 1. [AWS Setup](#1-aws-setup)
 2. [Local Environment Setup](#2-local-environment-setup)
-3. [DVC Configuration](#3-dvc-configuration)
-4. [Jenkins Setup](#4-jenkins-setup)
-5. [Docker Setup](#5-docker-setup)
-6. [Kubernetes (EKS) Setup](#6-kubernetes-eks-setup)
-7. [Running the Pipeline](#7-running-the-pipeline)
-8. [Troubleshooting](#8-troubleshooting)
+3. [MLflow Setup](#3-mlflow-setup)
+4. [DVC Configuration](#4-dvc-configuration)
+5. [Jenkins Setup](#5-jenkins-setup)
+6. [Docker Setup](#6-docker-setup)
+7. [Kubernetes (EKS) Setup](#7-kubernetes-eks-setup)
+8. [Running the Pipeline](#8-running-the-pipeline)
+9. [Troubleshooting](#9-troubleshooting)
 
 ---
 
@@ -150,9 +151,103 @@ aws configure
 
 ---
 
-## 3. DVC Configuration
+## 3. MLflow Setup
 
-### 3.1 Initialize DVC
+### 3.1 Start MLflow Server (Local Development)
+
+**Option A: Using Docker Compose (Recommended)**
+
+```bash
+# Set AWS credentials for artifact storage
+export AWS_ACCESS_KEY_ID=your_access_key
+export AWS_SECRET_ACCESS_KEY=your_secret_key
+
+# Start MLflow with PostgreSQL backend
+docker-compose up -d
+
+# Verify services
+docker-compose ps
+
+# Check logs
+docker-compose logs -f mlflow
+
+# Access MLflow UI
+# Open: http://localhost:5000
+```
+
+**Option B: Simple Local Setup**
+
+```bash
+# Start MLflow with SQLite backend
+mlflow server \
+  --backend-store-uri sqlite:///mlflow.db \
+  --default-artifact-root ./mlflow-artifacts \
+  --host 0.0.0.0 \
+  --port 5000
+
+# Access MLflow UI
+# Open: http://localhost:5000
+```
+
+### 3.2 Configure MLflow for AWS (Production)
+
+```bash
+# Run setup script
+# Windows:
+powershell -ExecutionPolicy Bypass -File mlflow-setup.ps1
+
+# Linux/Mac:
+bash mlflow-setup.sh
+```
+
+This script will:
+- Create S3 bucket for MLflow artifacts
+- Enable versioning on the bucket
+- Update params.yaml with bucket name
+
+### 3.3 Verify MLflow Setup
+
+```bash
+# Test MLflow connection
+curl http://localhost:5000/health
+
+# Run a test training
+export MLFLOW_TRACKING_URI=http://localhost:5000
+python src/train.py
+
+# Check MLflow UI for new experiment
+# Open: http://localhost:5000
+```
+
+### 3.4 MLflow Model Registry
+
+```bash
+# View registered models
+mlflow models list
+
+# Check model versions
+python -c "
+import mlflow
+from mlflow.tracking import MlflowClient
+
+mlflow.set_tracking_uri('http://localhost:5000')
+client = MlflowClient()
+
+models = client.search_registered_models()
+for model in models:
+    print(f'Model: {model.name}')
+    for version in model.latest_versions:
+        print(f'  Version: {version.version}, Stage: {version.current_stage}')
+"
+```
+
+For detailed MLflow setup, see [MLFLOW_SETUP.md](MLFLOW_SETUP.md)
+
+---
+
+## 4. DVC Configuration
+
+### 4.1 Initialize DVC
 
 ```bash
 # Initialize DVC in your project
@@ -169,7 +264,7 @@ git add .dvc/config .dvcignore
 git commit -m "Initialize DVC with S3 remote"
 ```
 
-### 3.2 Add Data to DVC
+### 4.2 Add Data to DVC
 
 ```bash
 # Add raw data to DVC tracking
@@ -183,7 +278,7 @@ git commit -m "Track raw data with DVC"
 dvc push
 ```
 
-### 3.3 Verify DVC Setup
+### 4.3 Verify DVC Setup
 
 ```bash
 # Check DVC status
@@ -198,9 +293,9 @@ dvc pull
 
 ---
 
-## 4. Jenkins Setup
+## 5. Jenkins Setup
 
-### 4.1 Install Jenkins
+### 5.1 Install Jenkins
 
 **Option A: Docker (Recommended for testing)**
 ```bash
@@ -214,7 +309,7 @@ docker run -d -p 8080:8080 -p 50000:50000 \
 - Download from: https://www.jenkins.io/download/
 - Follow installation wizard
 
-### 4.2 Initial Jenkins Configuration
+### 5.2 Initial Jenkins Configuration
 
 ```bash
 # Get initial admin password (Docker)
@@ -229,7 +324,7 @@ docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 3. Install suggested plugins
 4. Create admin user
 
-### 4.3 Install Required Jenkins Plugins
+### 5.3 Install Required Jenkins Plugins
 
 Go to: Manage Jenkins → Manage Plugins → Available
 
@@ -240,7 +335,7 @@ Install these plugins:
 - Docker Pipeline
 - Kubernetes CLI Plugin
 
-### 4.4 Configure AWS Credentials in Jenkins
+### 5.4 Configure AWS Credentials in Jenkins
 
 1. Go to: Manage Jenkins → Manage Credentials
 2. Click on "(global)" domain
@@ -252,7 +347,7 @@ Install these plugins:
    - Secret Access Key: (from step 1.1)
 6. Click "OK"
 
-### 4.5 Create Jenkins Pipeline Job
+### 5.5 Create Jenkins Pipeline Job
 
 1. Click "New Item"
 2. Enter name: "mlops-pipeline"
@@ -261,16 +356,16 @@ Install these plugins:
 5. Under "Pipeline" section:
    - Definition: "Pipeline script from SCM"
    - SCM: "Git"
-   - Repository URL: `https://github.com/YOUR_USERNAME/mlops-project.git`
-   - Branch: `*/master`
+   - Repository URL: `https://github.com/SrinathMLOps/cicdendtoendwithmlops.git`
+   - Branch: `*/main`
    - Script Path: `Jenkinsfile`
 6. Click "Save"
 
 ---
 
-## 5. Docker Setup
+## 6. Docker Setup
 
-### 5.1 Test Docker Build Locally
+### 6.1 Test Docker Build Locally
 
 ```bash
 # Build image
@@ -290,7 +385,7 @@ docker stop test_app
 docker rm test_app
 ```
 
-### 5.2 Login to ECR
+### 6.2 Login to ECR
 
 ```bash
 # Get login command
@@ -301,9 +396,9 @@ aws ecr get-login-password --region us-east-1 | \
 
 ---
 
-## 6. Kubernetes (EKS) Setup
+## 7. Kubernetes (EKS) Setup
 
-### 6.1 Configure kubectl for EKS
+### 7.1 Configure kubectl for EKS
 
 ```bash
 # Update kubeconfig
@@ -314,7 +409,7 @@ kubectl get nodes
 kubectl get namespaces
 ```
 
-### 6.2 Create Kubernetes Namespace
+### 7.2 Create Kubernetes Namespace
 
 ```bash
 kubectl create namespace mlops
@@ -323,7 +418,7 @@ kubectl create namespace mlops
 kubectl config set-context --current --namespace=mlops
 ```
 
-### 6.3 Deploy Application to EKS
+### 7.3 Deploy Application to EKS
 
 ```bash
 # Apply Kubernetes manifests
@@ -339,7 +434,7 @@ kubectl get services
 kubectl get service mlops-serving -o wide
 ```
 
-### 6.4 Test Deployment
+### 7.4 Test Deployment
 
 ```bash
 # Port forward to test locally
@@ -351,9 +446,9 @@ curl http://localhost:8000/
 
 ---
 
-## 7. Running the Pipeline
+## 8. Running the Pipeline
 
-### 7.1 Push Code to GitHub
+### 8.1 Push Code to GitHub
 
 ```bash
 # Initialize git repository
@@ -362,12 +457,12 @@ git add .
 git commit -m "Initial commit: MLOps project setup"
 
 # Add remote and push
-git remote add origin https://github.com/YOUR_USERNAME/mlops-project.git
-git branch -M master
-git push -u origin master
+git remote add origin https://github.com/SrinathMLOps/cicdendtoendwithmlops.git
+git branch -M main
+git push -u origin main
 ```
 
-### 7.2 Trigger Jenkins Pipeline
+### 8.2 Trigger Jenkins Pipeline
 
 **Option A: Manual Trigger**
 1. Go to Jenkins dashboard
@@ -381,7 +476,7 @@ git push -u origin master
 4. Select "Just the push event"
 5. Click "Add webhook"
 
-### 7.3 Monitor Pipeline Execution
+### 8.3 Monitor Pipeline Execution
 
 1. Click on build number (e.g., #1)
 2. Click "Console Output" to see logs
@@ -389,9 +484,11 @@ git push -u origin master
    - Checkout Code
    - Verify Environment
    - Install Dependencies
+   - Start MLflow Server
    - DVC Pull
    - Train Model
    - Show Metrics
+   - MLflow Model Registry
    - Approve Promotion (manual step)
    - Promote Model
    - Push Artifacts
@@ -401,7 +498,7 @@ git push -u origin master
    - Push to ECR
    - Deploy to EKS
 
-### 7.4 Approve Production Deployment
+### 8.4 Approve Production Deployment
 
 When pipeline reaches "Approve Promotion" stage:
 1. Click on the build
@@ -410,7 +507,7 @@ When pipeline reaches "Approve Promotion" stage:
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 ### Common Issues
 

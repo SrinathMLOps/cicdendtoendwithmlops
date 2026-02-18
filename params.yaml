@@ -11,3 +11,9 @@ promote:
   min_accuracy: 0.85
   staging_model: models/staging/model.pkl
   production_model: models/production/model.pkl
+
+mlflow:
+  tracking_uri: http://localhost:5000
+  experiment_name: iris-classification
+  model_name: iris-model
+  s3_bucket: mlflow-artifacts-bucket
